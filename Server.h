@@ -21,23 +21,24 @@ class Server {
 	unsigned int bufferSize;
 	unsigned int maxClients;
 
-	IPaddress serverIP; 
+	IPaddress serverIP;
 	TCPsocket serverSocket;
 	std::string hostName;
 
-	TCPsocket* clientSocket;
-	bool* socketIsFree;
-	char* buffer;
+	TCPsocket *clientSocket;
+	bool *socketIsFree;
+	char *buffer;
 
 	SDLNet_SocketSet socketSet;
 	unsigned int clientCount;
 	bool shutdownServer;
 
-	void(*activityReaction)(Server*, ClientInfo);
+	void(*activityReaction)(Server *, ClientInfo);
 
 public:
 
-	Server(unsigned int port, unsigned int bufferSize, unsigned int maxSockets, void reaction(Server*, ClientInfo), std::string hostName) {
+	Server(unsigned int port, unsigned int bufferSize, unsigned int maxSockets, void reaction(Server *, ClientInfo),
+		   std::string hostName) {
 
 		shutdownServer = false;
 
@@ -56,10 +57,6 @@ public:
 
 		socketSet = SDLNet_AllocSocketSet(maxSockets);
 
-<<<<<<< HEAD
-		int hostResolved = SDLNet_ResolveHost(&serverIP, NULL, port);
-
-=======
 		if (socketSet == NULL)
 			std::cout << "Failed to allocate the socket set : " << SDLNet_GetError() << std::endl;
 
@@ -68,7 +65,6 @@ public:
 		if (hostResolved == -1)
 			std::cout << "Failed to resolve server host : " << SDLNet_GetError() << std::endl;
 
->>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 		for (unsigned int i = 0; i < maxClients; ++i) {
 			clientSocket[i] = NULL;
 			socketIsFree[i] = true;
@@ -76,17 +72,14 @@ public:
 
 		serverSocket = SDLNet_TCP_Open(&serverIP);
 
-<<<<<<< HEAD
-=======
 		if (!serverSocket)
 			std::cout << "Failed to open server socket : " << SDLNet_GetError() << std::endl;
 
->>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 		SDLNet_TCP_AddSocket(socketSet, serverSocket);
 	}
 
 	~Server() {
-		
+
 		for (unsigned int i = 0; i < maxClients; ++i) {
 			if (!socketIsFree[i]) {
 				SDLNet_TCP_Close(clientSocket[i]);
@@ -102,15 +95,15 @@ public:
 		delete[] buffer;
 	}
 
-	void checkForConnections(){
-		
+	void checkForConnections() {
+
 		int numActiveSockets = SDLNet_CheckSockets(socketSet, 1);
 		int serverSocketActivity = SDLNet_SocketReady(serverSocket);
 
 		if (serverSocketActivity != 0) {
 			if (clientCount < maxClients) {
 
-				
+
 				int freeSpot = -99;
 				for (unsigned int i = 0; i < maxClients; ++i) {
 					if (socketIsFree[i]) {
@@ -121,11 +114,8 @@ public:
 					}
 				}
 
-<<<<<<< HEAD
-=======
 				std::cout << "New Client" << std::endl;
 
->>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 				std::string bufferString;
 
 				clientSocket[freeSpot] = SDLNet_TCP_Accept(serverSocket);
@@ -135,9 +125,9 @@ public:
 				info.clientName = "New client";
 				info.message = new std::string(SERVER_NOT_FULL);
 				info.convertToString(bufferString);
-				buffer = (char*)bufferString.c_str();
+				buffer = (char *) bufferString.c_str();
 				int msgLength = strlen(buffer) + 1;
-				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
+				SDLNet_TCP_Send(clientSocket[freeSpot], (void *) buffer, msgLength);
 			}
 			else {
 
@@ -145,14 +135,14 @@ public:
 
 				strcpy(buffer, SERVER_FULL);
 				int msgLength = strlen(buffer) + 1;
-				SDLNet_TCP_Send(tempSock, (void *)buffer, msgLength);
+				SDLNet_TCP_Send(tempSock, (void *) buffer, msgLength);
 				SDLNet_TCP_Close(tempSock);
 			}
-		} 
+		}
 	}
 
 	void checkForActivity() {
-		
+
 		for (unsigned int clientNumber = 0; clientNumber < maxClients; ++clientNumber) {
 
 			int clientSocketActivity = SDLNet_SocketReady(clientSocket[clientNumber]);
@@ -169,7 +159,7 @@ public:
 					socketIsFree[clientNumber] = true;
 					--clientCount;
 				}
-				else 
+				else
 					activityReaction(this, ClientInfo(buffer));
 			}
 		}
@@ -179,13 +169,13 @@ public:
 
 		std::string str;
 		info.convertToString(str);
-		const char* message = str.c_str();
+		const char *message = str.c_str();
 		unsigned int msgLength = strlen(message) + 1;
 
 		for (unsigned int i = 0; i < maxClients; ++i) {
 
 			if (msgLength > 1 && !socketIsFree[i])
-				SDLNet_TCP_Send(clientSocket[i], (void*)message, msgLength);
+				SDLNet_TCP_Send(clientSocket[i], (void *) message, msgLength);
 		}
 	}
 
@@ -201,8 +191,4 @@ public:
 	std::string getHostName() {
 		return hostName;
 	}
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
