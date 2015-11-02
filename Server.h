@@ -56,8 +56,19 @@ public:
 
 		socketSet = SDLNet_AllocSocketSet(maxSockets);
 
+<<<<<<< HEAD
 		int hostResolved = SDLNet_ResolveHost(&serverIP, NULL, port);
 
+=======
+		if (socketSet == NULL)
+			std::cout << "Failed to allocate the socket set : " << SDLNet_GetError() << std::endl;
+
+		int hostResolved = SDLNet_ResolveHost(&serverIP, NULL, port);
+
+		if (hostResolved == -1)
+			std::cout << "Failed to resolve server host : " << SDLNet_GetError() << std::endl;
+
+>>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 		for (unsigned int i = 0; i < maxClients; ++i) {
 			clientSocket[i] = NULL;
 			socketIsFree[i] = true;
@@ -65,6 +76,12 @@ public:
 
 		serverSocket = SDLNet_TCP_Open(&serverIP);
 
+<<<<<<< HEAD
+=======
+		if (!serverSocket)
+			std::cout << "Failed to open server socket : " << SDLNet_GetError() << std::endl;
+
+>>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 		SDLNet_TCP_AddSocket(socketSet, serverSocket);
 	}
 
@@ -104,6 +121,11 @@ public:
 					}
 				}
 
+<<<<<<< HEAD
+=======
+				std::cout << "New Client" << std::endl;
+
+>>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
 				std::string bufferString;
 
 				clientSocket[freeSpot] = SDLNet_TCP_Accept(serverSocket);
@@ -179,4 +201,8 @@ public:
 	std::string getHostName() {
 		return hostName;
 	}
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> dc47b218248bc436a96753124ddf9cd8e062d5c7
