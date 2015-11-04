@@ -1,58 +1,87 @@
 #pragma once
 #include <string>
 
+enum server_message_type {NEW_CLIENT, NEW_MESSAGE, CLIENT_DISCONNECTED};
+
 class ServerInfo {
 
 public:
 
+
+
+	server_message_type message_type;
+	int clientID;
 	std::string clientName;
 	std::string* message;
+	bool finish;
 
 	ServerInfo() {
 
+		message = nullptr;
 	}
 
-	ServerInfo(const char* info) {
+	ServerInfo(char* info) {
 
 		std::string values(info);
 		std::string tmp = values;
-		int numberValue = 1;
 		int letter = 0;
-		bool ok = false;
 
-		while (!ok) {
+		for (int i = 0; i < 5; ++i) {
 
 			while (tmp[letter] != '\n') ++letter;
 
 			tmp.erase(letter, tmp.size());
 			values.erase(0, letter + 1);
 
-			switch (numberValue) {
+			switch (i) {
 
-			case 1:
-				clientName = std::string(tmp);
-				break;
+				case 0:
 
-			case 2:
+					message_type = server_message_type(SDL_atoi(tmp.c_str()));
+					break;
 
-				if (tmp == "NULL")
-					message = nullptr;
-				else
-					message = new std::string(tmp);
-				break;
+				case 1:
+
+					clientID = SDL_atoi(tmp.c_str());
+					break;
+				case 2:
+					clientName = std::string(tmp);
+					break;
+
+				case 3:
+
+					if (tmp == "NULL")
+						message = nullptr;
+					else
+						message = new std::string(tmp);
+					break;
+
+				case 4:
+
+					finish = SDL_atoi(tmp.c_str());
+					break;
 			}
-			++numberValue;
 			letter = 0;
 
 			if (values.size() > 0)
 				tmp = values;
-			else
-				ok = true;
-
 		}
 	}
 
+	~ServerInfo() {
+
+		delete message;
+	}
+
 	virtual void convertToString(std::string &returnValue) {
+
+		char chr[10];
+
+		returnValue += SDL_itoa(message_type, chr, 10);
+		returnValue.push_back('\n');
+
+		returnValue += SDL_itoa(clientID, chr, 10);
+		returnValue.push_back('\n');
 
 		returnValue += clientName;
 		returnValue.push_back('\n');
@@ -62,6 +91,13 @@ public:
 		else
 			returnValue.append("NULL");
 		returnValue.push_back('\n');
+
+		if (finish)
+			returnValue.push_back('1');
+		else
+			returnValue.push_back('0');
+
+		returnValue.push_back('\n');
 	}
 };
 
@@ -69,53 +105,74 @@ class ClientInfo {
 
 public:
 
+	int ID;
 	std::string name;
 	std::string* message;
+	bool finish;
 
 	ClientInfo() {
 
+		message = nullptr;
 	}
 
-	ClientInfo(const char* info) {
+	ClientInfo(char* info) {
 
-		std::string values(info);
-		std::string tmp = values;
-		int numberValue = 1;
+		std::string* values = new std::string(info);
 		int letter = 0;
-		bool ok = false;
 
-		while (!ok) {
+		int begin = 0;
 
-			while (tmp[letter] != '\n') ++letter;
+		for (int i = 0; i < 4; ++i) {
 
-			tmp.erase(letter, tmp.size());
-			values.erase(0, letter + 1);
+			std::string tmp;
 
-			switch (numberValue) {
+			while (values->at(letter) != '\n') ++letter;
 
-			case 1:
-				name = std::string(tmp);
-				break;
+			for (int k = begin; k < letter; ++k)
+				tmp.push_back(values->at(k));
 
-			case 2:
+			begin = ++letter;
 
-				if (tmp == "NULL")
-					message = nullptr;
-				else
-					message = new std::string(tmp);
-				break;
+			switch (i) {
+
+				case 0:
+
+					ID = SDL_atoi(tmp.c_str());
+					break;
+
+				case 1:
+					name = std::string(tmp);
+					break;
+
+				case 2:
+
+					if (tmp == "NULL")
+						message = nullptr;
+					else
+						message = new std::string(tmp);
+					break;
+
+				case 3:
+
+					finish = SDL_atoi(tmp.c_str());
+					break;
 			}
-			++numberValue;
-			letter = 0;
-
-			if (values.size() > 0)
-				tmp = values;
-			else
-				ok = true;
 		}
+		delete values;
+	}
+
+	~ClientInfo() {
+
+		delete message;
 	}
 
 	virtual void convertToString(std::string &returnValue) {
+
+
+		char chr[10];
+
+		returnValue += SDL_itoa(ID, chr, 10);
+		returnValue.push_back('\n');
 
 		returnValue += name;
 		returnValue.push_back('\n');
@@ -126,5 +183,11 @@ public:
 			returnValue.append("NULL");
 		returnValue.push_back('\n');
 
+		if (finish)
+			returnValue.push_back('1');
+		else
+			returnValue.push_back('0');
+
+		returnValue.push_back('\n');
 	}
 };

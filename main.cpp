@@ -1,32 +1,48 @@
 #include <iostream>
+#include <list>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_net.h>
+#include <exception>
 #include "Server.h"
 
-void serverReaction(Server* server, ClientInfo info) {
+void serverReaction(Server* server, std::list<ClientInfo*> infos) {
 
-    ServerInfo send;
-    send.clientName = info.name;
-    send.message = info.message;
+    for (auto info : infos) {
+        ServerInfo send;
+        send.clientName = info->name;
+        send.message = new std::string(*info->message);
+        send.finish = info->finish;
+        send.clientID = info->ID;
+        send.message_type = NEW_MESSAGE;
 
-    if (info.message->c_str() == SHUTDOWN_SIGNAL)
-        server->setShutdownStatus(true);
+        if (info->message->c_str() == SHUTDOWN_SIGNAL)
+            server->setShutdownStatus(true);
 
-    else
-        server->sendToClient(send);
+        else
+            server->sendToClient(&send);
+    }
 }
 
 int main(int argc, char** argv) {
 
-    Server *server = new Server(21255, 512, 5, serverReaction, "server");
+    Server *server = new Server(21225, 512, 5, serverReaction, "server");
 
     if (SDLNet_Init() == -1)
         std::cout << "Error : " << SDLNet_GetError() << std::endl;
 
-    while (!server->getShutdownStatus()) {
+    try {
 
-        server->checkForConnections();
-        server->checkForActivity();
+        while (!server->getShutdownStatus()) {
+
+            server->checkForConnections();
+            server->checkForActivity();
+        }
+
+    }
+
+    catch (std::exception& e) {
+
+        std::cout << e.what();
     }
 
     return 0;

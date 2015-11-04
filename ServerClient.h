@@ -1,11 +1,10 @@
 #pragma once
+
 #include <iostream>
-#include "Info.h"
 
 #define QUIT_SIGNAL "/quit"
 #define CONNECTION_TIMEOUT_PERIOD 5000
 #define SOCKET_SET_POLL_PERIOD 10
-#define SHUTDOWN_SIGNAL "/shutdown"
 
 class ServerClient {
 private:
@@ -15,6 +14,7 @@ private:
 
 	std::string serverHostname;
 	IPaddress serverIP;
+	int ID;
 	std::string clientName;
 	TCPsocket clientSocket;
 
@@ -23,7 +23,7 @@ private:
 	SDLNet_SocketSet socketSet;
 	bool shutdownClient;
 
-	void(*newMessageReaction)(ServerInfo);
+	void(*newMessageReaction)(std::list<ServerInfo>);
 
 public:
 
@@ -63,8 +63,17 @@ public:
 
 			if (gotServerResponse != 0) {
 
-				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize);
-				newMessageReaction(ServerInfo(buffer));
+				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
+
+                ServerInfo serverInfo(buffer);
+                ID = serverInfo.clientID;
+
+                ClientInfo info;
+                info.finish = true;
+                info.message = "Connection";
+                info.name = clientName;
+
+                sendToServer(info);
 			}
 		}
 		else {
@@ -75,6 +84,8 @@ public:
 	void checkForIncomingMessages(){
 
 		ServerInfo info;
+        std::list<ServerInfo> list;
+
 		int activeSockets = SDLNet_CheckSockets(socketSet, SOCKET_SET_POLL_PERIOD);
 
 		if (activeSockets != 0) {
@@ -82,15 +93,33 @@ public:
 			int gotMessage = SDLNet_SocketReady(clientSocket);
 
 			if (gotMessage != 0) {
-				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize);
+				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
 
 				if (serverResponseByteCount != 0) {
-					info = ServerInfo(buffer);
+
+                    info = ServerInfo(buffer);
+                    list.push_back(info);
 
 					if (*info.message == SHUTDOWN_SIGNAL)
 						shutdownClient = true;
-					else
-						newMessageReaction(info);
+
+					else {
+
+						while (true) {
+
+							serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
+
+							if (serverResponseByteCount != 0) {
+
+								list.push_back(ServerInfo(buffer));
+
+								if (list.back().finish)
+									break;
+
+							}
+						}
+                        newMessageReaction(list);
+                    }
 				}
 			}
 		}
@@ -113,5 +142,10 @@ public:
 
 	std::string getClientName() {
 		return clientName;
+	}
+
+	int getClientID() {
+
+		return ID;
 	}
 };
