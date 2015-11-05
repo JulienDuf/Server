@@ -5,22 +5,21 @@
 #include <exception>
 #include "Server.h"
 
-void serverReaction(Server* server, std::list<ClientInfo*> infos) {
+void serverReaction(Server* server, ClientInfo* info) {
 
-    for (auto info : infos) {
-        ServerInfo send;
-        send.clientName = info->name;
-        send.message = new std::string(*info->message);
-        send.finish = info->finish;
-        send.clientID = info->ID;
-        send.message_type = NEW_MESSAGE;
+    ServerInfo* send = new ServerInfo();
+    send->clientName = info->name;
+    send->message = new std::string(*info->message);
+    send->clientID = info->ID;
+    send->message_type = NEW_MESSAGE;
 
-        if (info->message->c_str() == SHUTDOWN_SIGNAL)
-            server->setShutdownStatus(true);
+    if (info->message->c_str() == SHUTDOWN_SIGNAL)
+        server->setShutdownStatus(true);
 
-        else
-            server->sendToClient(&send);
-    }
+    else
+        server->sendToClient(send);
+
+    delete send;
 }
 
 int main(int argc, char** argv) {

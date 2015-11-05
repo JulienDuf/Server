@@ -27,17 +27,16 @@ class Server {
 
 	TCPsocket* clientSocket;
 	bool* socketIsFree;
-	char* buffer;
 
 	SDLNet_SocketSet socketSet;
 	unsigned int clientCount;
 	bool shutdownServer;
 
-	void(*activityReaction)(Server*, std::list<ClientInfo*>);
+	void(*activityReaction)(Server*, ClientInfo*);
 
 public:
 
-	Server(unsigned int port, unsigned int bufferSize, unsigned int maxSockets, void reaction(Server*, std::list<ClientInfo*>), std::string hostName) {
+	Server(unsigned int port, unsigned int bufferSize, unsigned int maxSockets, void reaction(Server*, ClientInfo*), std::string hostName) {
 
 		shutdownServer = false;
 
@@ -49,7 +48,6 @@ public:
 
 		this->clientSocket = new TCPsocket[maxClients];
 		this->socketIsFree = new bool[maxClients];
-		this->buffer = new char[bufferSize];
 		this->hostName = hostName;
 
 		clientCount = 0;
@@ -92,7 +90,6 @@ public:
 
 		delete[] clientSocket;
 		delete[] socketIsFree;
-		delete[] buffer;
 	}
 
 	void checkForConnections(){
@@ -124,11 +121,10 @@ public:
 				ServerInfo* info = new ServerInfo();
 				info->clientName = "New client";
 				info->message = new std::string(SERVER_NOT_FULL);
-				info->finish = true;
 				info->message_type = NEW_CLIENT;
 				info->clientID = freeSpot;
 				info->convertToString(bufferString);
-				buffer = (char*)bufferString.c_str();
+				const char* buffer = bufferString.c_str();
 				int msgLength = strlen(buffer) + 1;
 				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
 				delete info;
@@ -138,17 +134,18 @@ public:
 
 				TCPsocket tempSock = SDLNet_TCP_Accept(serverSocket);
 
+				char* buffer = new char[bufferSize];
+
 				strcpy(buffer, SERVER_FULL);
 				int msgLength = strlen(buffer) + 1;
 				SDLNet_TCP_Send(tempSock, (void *)buffer, msgLength);
 				SDLNet_TCP_Close(tempSock);
+				delete[] buffer;
 			}
 		} 
 	}
 
 	void checkForActivity() {
-
-		std::list<ClientInfo*> list;
 
 		for (unsigned int clientNumber = 0; clientNumber < maxClients; ++clientNumber) {
 
@@ -156,10 +153,8 @@ public:
 
 			if (clientSocketActivity != 0) {
 
-				memset(buffer, 0, sizeof(buffer));
+				char* buffer = new char[bufferSize];
 				int receivedByteCount = SDLNet_TCP_Recv(clientSocket[clientNumber], buffer, bufferSize);
-
-				std::cout << "Buffer size : " << strlen(buffer) << std::endl;
 
 				if (receivedByteCount <= 0) {
 
@@ -168,66 +163,31 @@ public:
 					clientSocket[clientNumber] = NULL;
 					socketIsFree[clientNumber] = true;
 					--clientCount;
+
+					delete[] buffer;
 				}
 
 				else {
 
 					ClientInfo* clientInfo = new ClientInfo(buffer);
-					list.push_back(clientInfo);
-					if (!list.back()->finish) {
+					delete[] buffer;
 
-						while (true) {
-
-							if (clientSocketActivity != 0) {
-
-								memset(buffer, 0, sizeof(buffer));
-								receivedByteCount = SDLNet_TCP_Recv(clientSocket[clientNumber], buffer, bufferSize - 1);
-
-								std::cout << "Buffer size : " << sizeof(buffer) << std::endl;
-
-								if (receivedByteCount > 0) {
-
-									list.push_back(new ClientInfo(buffer));
-									if (list.back()->finish)
-										break;
-								}
-							}
-
-							//clientSocketActivity = SDLNet_SocketReady(clientSocket[clientNumber]);
-						}
-						activityReaction(this, list);
-
-
-						for (auto item : list)
-							delete item;
-
-						list.clear();
-					}
-
-					else if (*clientInfo->message == CONNECTION_SUCCESSFUL) {
+					if (*clientInfo->message == CONNECTION_SUCCESSFUL) {
 
 						ServerInfo* info = new ServerInfo();
 						info->message = new std::string("New connection");
 						info->clientID = clientInfo->ID;
-						info->finish = true;
 						info->clientName = clientInfo->name;
 						info->message_type = NEW_CLIENT;
 
 						sendToClient(info);
 						delete info;
-						list.pop_back();
-						delete clientInfo;
 					}
 
-					else {
-						activityReaction(this, list);
+					else
+						activityReaction(this, clientInfo);
 
-						for (auto item : list)
-							delete item;
-
-						list.clear();
-
-					}
+					delete clientInfo;
 				}
 			}
 		}

@@ -1,10 +1,11 @@
 #pragma once
-
 #include <iostream>
 
 #define QUIT_SIGNAL "/quit"
 #define CONNECTION_TIMEOUT_PERIOD 5000
 #define SOCKET_SET_POLL_PERIOD 10
+#define CONNECTION_SUCCESSFUL "/success"
+#define SHUTDOWN_SIGNAL "/shutdown"
 
 class ServerClient {
 private:
@@ -18,16 +19,14 @@ private:
 	std::string clientName;
 	TCPsocket clientSocket;
 
-	char* buffer;
-
 	SDLNet_SocketSet socketSet;
 	bool shutdownClient;
 
-	void(*newMessageReaction)(std::list<ServerInfo>);
+	void(*newMessageReaction)(ServerInfo*);
 
 public:
 
-	ServerClient(std::string serverAddress, unsigned int serverPort, unsigned int bufferSize, void reaction(ServerInfo), std::string name) {
+	ServerClient(std::string serverAddress, unsigned int serverPort, unsigned int bufferSize, void reaction(ServerInfo*), std::string name) {
 
 		this->shutdownClient = false;
 		this->serverHostname = serverAddress;
@@ -37,8 +36,10 @@ public:
 		this->bufferSize = bufferSize;
 		clientName = name;
 
-		buffer = new char[bufferSize];
 		socketSet = SDLNet_AllocSocketSet(2);
+
+		if (socketSet == NULL)
+			std::cout << "Failed to allocate the socket set : " << SDLNet_GetError() << std::endl;
 	}
 
 	~ServerClient(){
@@ -46,7 +47,6 @@ public:
 		SDLNet_TCP_Close(clientSocket);
 		SDLNet_FreeSocketSet(socketSet);
 
-		delete[] buffer;
 	}
 
 	void connectToServer(){
@@ -63,18 +63,26 @@ public:
 
 			if (gotServerResponse != 0) {
 
+				char* buffer = new char[bufferSize];
 				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
 
-                ServerInfo serverInfo(buffer);
-                ID = serverInfo.clientID;
+                ServerInfo* serverInfo = new ServerInfo(buffer);
+                ID = serverInfo->clientID;
+				delete[] buffer;
 
-                ClientInfo info;
-                info.finish = true;
-                info.message = "Connection";
-                info.name = clientName;
+                ClientInfo* info = new ClientInfo();
+				info->ID = ID;
+                info->message = new std::string(CONNECTION_SUCCESSFUL);
+                info->name = clientName;
 
                 sendToServer(info);
+
+				delete info;
+				delete serverInfo;
 			}
+
+			else
+				shutdownClient = true;
 		}
 		else {
 			shutdownClient = true;
@@ -83,8 +91,7 @@ public:
 
 	void checkForIncomingMessages(){
 
-		ServerInfo info;
-        std::list<ServerInfo> list;
+		ServerInfo* info;
 
 		int activeSockets = SDLNet_CheckSockets(socketSet, SOCKET_SET_POLL_PERIOD);
 
@@ -93,45 +100,32 @@ public:
 			int gotMessage = SDLNet_SocketReady(clientSocket);
 
 			if (gotMessage != 0) {
+
+				char* buffer = new char[bufferSize];
 				int serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
 
 				if (serverResponseByteCount != 0) {
 
-                    info = ServerInfo(buffer);
-                    list.push_back(info);
+                    info = new ServerInfo(buffer);
 
-					if (*info.message == SHUTDOWN_SIGNAL)
+					if (*info->message == SHUTDOWN_SIGNAL)
 						shutdownClient = true;
 
-					else {
-
-						while (true) {
-
-							serverResponseByteCount = SDLNet_TCP_Recv(clientSocket, buffer, bufferSize - 1);
-
-							if (serverResponseByteCount != 0) {
-
-								list.push_back(ServerInfo(buffer));
-
-								if (list.back().finish)
-									break;
-
-							}
-						}
-                        newMessageReaction(list);
-                    }
+					newMessageReaction(info);
+					delete info;
 				}
+				delete[] buffer;
 			}
 		}
 	}
 
-	void sendToServer(ClientInfo info) {
+	void sendToServer(ClientInfo* info) {
 
 		std::string str;
-		info.convertToString(str);
+		info->convertToString(str);
 		const char* message = str.c_str();
 
-		unsigned int msgLength = strlen(message) + 1;
+		unsigned int msgLength = strlen(message);
 
 		SDLNet_TCP_Send(clientSocket, (void *)message, msgLength);
 	}
