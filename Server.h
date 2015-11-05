@@ -1,6 +1,7 @@
 #pragma once
 #include "Info.h"
 #include <sstream>
+#include <iostream>
 
 #define SERVER_NOT_FULL "OK"
 #define SERVER_FULL "FULL"
@@ -25,6 +26,7 @@ class Server {
 	TCPsocket serverSocket;
 	std::string hostName;
 
+	std::string* clientNames;
 	TCPsocket* clientSocket;
 	bool* socketIsFree;
 
@@ -48,6 +50,7 @@ public:
 
 		this->clientSocket = new TCPsocket[maxClients];
 		this->socketIsFree = new bool[maxClients];
+		this->clientNames = new std::string[maxClients];
 		this->hostName = hostName;
 
 		clientCount = 0;
@@ -90,6 +93,7 @@ public:
 
 		delete[] clientSocket;
 		delete[] socketIsFree;
+		delete[] clientNames;
 	}
 
 	void checkForConnections(){
@@ -129,6 +133,25 @@ public:
 				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
 				delete info;
 
+				for (unsigned int i = 0; i < maxClients; ++i) {
+
+					if (i != freeSpot && socketIsFree[i]) {
+
+						std::string str;
+
+						info = new ServerInfo();
+						info->clientName = clientNames[i];
+						info->message = new std::string("NULL");
+						info->message_type = CLIENTS_CONNECTED;
+						info->clientID = i;
+						info->convertToString(str);
+						buffer = str.c_str();
+						msgLength = strlen(buffer) + 1;
+						SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
+						delete info;
+					}
+				}
+
 			}
 			else {
 
@@ -136,7 +159,11 @@ public:
 
 				char* buffer = new char[bufferSize];
 
+#if defined(_WIN32)
+				strcpy_s(buffer, sizeof(char*), SERVER_FULL);
+#else
 				strcpy(buffer, SERVER_FULL);
+#endif
 				int msgLength = strlen(buffer) + 1;
 				SDLNet_TCP_Send(tempSock, (void *)buffer, msgLength);
 				SDLNet_TCP_Close(tempSock);
@@ -162,6 +189,7 @@ public:
 					SDLNet_TCP_Close(clientSocket[clientNumber]);
 					clientSocket[clientNumber] = NULL;
 					socketIsFree[clientNumber] = true;
+					clientNames[clientNumber].clear();
 					--clientCount;
 
 					delete[] buffer;
@@ -179,6 +207,7 @@ public:
 						info->clientID = clientInfo->ID;
 						info->clientName = clientInfo->name;
 						info->message_type = NEW_CLIENT;
+						clientNames[clientNumber] = clientInfo->name;
 
 						sendToClient(info);
 						delete info;

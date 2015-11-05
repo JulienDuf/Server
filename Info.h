@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-enum server_message_type {NEW_CLIENT, NEW_MESSAGE, CLIENT_DISCONNECTED};
+enum server_message_type {NEW_CLIENT, NEW_MESSAGE, CLIENT_DISCONNECTED, CLIENTS_CONNECTED};
 
 class ServerInfo {
 
