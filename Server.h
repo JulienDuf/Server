@@ -133,17 +133,17 @@ public:
 				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
 				delete info;
 
-				for (unsigned int i = 0; i < maxClients; ++i) {
+				for (unsigned int k = 0; k < maxClients; ++k) {
 
-					if (i != freeSpot && socketIsFree[i]) {
+					if (k != freeSpot && !socketIsFree[k]) {
 
 						std::string str;
 
 						info = new ServerInfo();
-						info->clientName = clientNames[i];
-						info->message = new std::string("NULL");
+						info->clientName = clientNames[k];
+						info->message = new std::string("One of the clients");
 						info->message_type = CLIENTS_CONNECTED;
-						info->clientID = i;
+						info->clientID = k;
 						info->convertToString(str);
 						buffer = str.c_str();
 						msgLength = strlen(buffer) + 1;
@@ -189,6 +189,15 @@ public:
 					SDLNet_TCP_Close(clientSocket[clientNumber]);
 					clientSocket[clientNumber] = NULL;
 					socketIsFree[clientNumber] = true;
+
+					ServerInfo* info = new ServerInfo();
+                                        info->clientName = clientNames[clientNumber];
+                                        info->message = new std::string("A client quit");
+                                        info->clientID = clientNumber;
+                                        info->message_type = CLIENT_DISCONNECTED;
+                                        sendToClient(info);
+                                        delete info;
+
 					clientNames[clientNumber].clear();
 					--clientCount;
 

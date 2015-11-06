@@ -24,10 +24,10 @@ void serverReaction(Server* server, ClientInfo* info) {
 
 int main(int argc, char** argv) {
 
-    Server *server = new Server(21225, 512, 5, serverReaction, "server");
-
     if (SDLNet_Init() == -1)
         std::cout << "Error : " << SDLNet_GetError() << std::endl;
+
+    Server *server = new Server(21225, 512, 5, serverReaction, "server");
 
     try {
 
