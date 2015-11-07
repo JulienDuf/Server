@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     if (SDLNet_Init() == -1)
         std::cout << "Error : " << SDLNet_GetError() << std::endl;
 
-    Server *server = new Server(21225, 512, 5, serverReaction, "server");
+    Server *server = new Server(212252, 512, 5, serverReaction, "server");
 
     try {
 
