@@ -2,7 +2,6 @@
 #include "Info.h"
 #include <sstream>
 #include <iostream>
-#include <time.h>
 
 #define SERVER_NOT_FULL "OK"
 #define SERVER_FULL "FULL"
@@ -129,58 +128,27 @@ public:
 				info->message_type = NEW_CLIENT;
 				info->clientID = freeSpot;
 				info->convertToString(bufferString);
-				const char* bufferTmp = bufferString.c_str();
-				int msgLength = strlen(bufferTmp) + 1;
-				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)bufferTmp, msgLength);
+				const char* buffer = bufferString.c_str();
+				int msgLength = strlen(buffer) + 1;
+				SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
 				delete info;
 
-				//while (SDLNet_SocketReady(clientSocket[freeSpot]) == 0);
+				for (unsigned int i = 0; i < maxClients; ++i) {
 
-				char* buffer = new char[bufferSize];
-
-				int receivedByteCount = SDLNet_TCP_Recv(clientSocket[freeSpot], buffer, bufferSize);
-
-				if (receivedByteCount > 0) {
-
-					ClientInfo* clientInfo = new ClientInfo(buffer);
-					delete[] buffer;
-
-					if (*clientInfo->message == CONNECTION_SUCCESSFUL) {
-
-						ServerInfo* info = new ServerInfo();
-						info->message = new std::string("New connection");
-						info->clientID = clientInfo->ID;
-						info->clientName = clientInfo->name;
-						info->message_type = NEW_CLIENT;
-						clientNames[freeSpot] = clientInfo->name;
-
-						sendToClient(info, freeSpot);
-						delete info;
-					}
-
-					delete clientInfo;
-
-				}
-
-				for (unsigned int k = 0; k < maxClients; ++k) {
-
-					if (k != freeSpot && !socketIsFree[k]) {
+					if ((i != freeSpot) && !socketIsFree[i]) {
 
 						std::string str;
 
 						info = new ServerInfo();
-						info->clientName = clientNames[k];
-						info->message = new std::string("One of the clients");
+						info->clientName = clientNames[i];
+						info->message = new std::string("NULL");
 						info->message_type = CLIENTS_CONNECTED;
-						info->clientID = k;
+						info->clientID = i;
 						info->convertToString(str);
-						bufferTmp = str.c_str();
-						msgLength = strlen(bufferTmp) + 1;
-						SDLNet_TCP_Send(clientSocket[freeSpot], (void*)bufferTmp, msgLength);
+						buffer = str.c_str();
+						msgLength = strlen(buffer) + 1;
+						SDLNet_TCP_Send(clientSocket[freeSpot], (void*)buffer, msgLength);
 						delete info;
-
-						SDL_Delay(100);
-
 					}
 				}
 
@@ -221,26 +189,35 @@ public:
 					SDLNet_TCP_Close(clientSocket[clientNumber]);
 					clientSocket[clientNumber] = NULL;
 					socketIsFree[clientNumber] = true;
-
-					ServerInfo* info = new ServerInfo();
-					info->clientName = clientNames[clientNumber];
-					info->message = new std::string("A client quit");
-					info->clientID = clientNumber;
-					info->message_type = CLIENT_DISCONNECTED;
-					sendToClient(info);
-					delete info;
-
 					clientNames[clientNumber].clear();
 					--clientCount;
+
+					delete[] buffer;
 				}
 
 				else {
+
 					ClientInfo* clientInfo = new ClientInfo(buffer);
-					activityReaction(this, clientInfo);
+					delete[] buffer;
+
+					if (*clientInfo->message == CONNECTION_SUCCESSFUL) {
+
+						ServerInfo* info = new ServerInfo();
+						info->message = new std::string("New connection");
+						info->clientID = clientInfo->ID;
+						info->clientName = clientInfo->name;
+						info->message_type = NEW_CLIENT;
+						clientNames[clientNumber] = clientInfo->name;
+
+						sendToClient(info);
+						delete info;
+					}
+
+					else
+						activityReaction(this, clientInfo);
+
 					delete clientInfo;
 				}
-
-				delete[] buffer;
 			}
 		}
 	}
@@ -255,20 +232,6 @@ public:
 		for (unsigned int i = 0; i < maxClients; ++i) {
 
 			if (msgLength > 1 && !socketIsFree[i])
-				SDLNet_TCP_Send(clientSocket[i], (void*)message, msgLength);
-		}
-	}
-
-	void sendToClient(ServerInfo* info, int exception) {
-
-		std::string str;
-		info->convertToString(str);
-		const char* message = str.c_str();
-		unsigned int msgLength = strlen(message) + 1;
-
-		for (unsigned int i = 0; i < maxClients; ++i) {
-
-			if (msgLength > 1 && !socketIsFree[i] && i != exception)
 				SDLNet_TCP_Send(clientSocket[i], (void*)message, msgLength);
 		}
 	}
