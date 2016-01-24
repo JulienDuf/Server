@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_net.h>
 #include <exception>
+#include <fstream>
 #include "Server.h"
 
 void serverReaction(Server* server, ClientInfo* info) {
@@ -20,6 +21,18 @@ void serverReaction(Server* server, ClientInfo* info) {
         server->sendToClient(send);
 
     delete send;
+
+   std::ofstream file;
+   file.open("output.txt");
+   
+   file << std::to_string(info->servoDegree) << std::endl;
+   file << std::to_string(info->speed);
+
+   file.close();
+
+   std::cout << "servoDegree : ";
+   std::cout << info->servoDegree << std::endl;
+   
 }
 
 int main(int argc, char** argv) {
@@ -27,7 +40,7 @@ int main(int argc, char** argv) {
     if (SDLNet_Init() == -1)
         std::cout << "Error : " << SDLNet_GetError() << std::endl;
 
-    Server *server = new Server(21225, 512, 5, serverReaction, "server");
+    Server *server = new Server(8889, 512, 5, serverReaction, "server");
 
     try {
 

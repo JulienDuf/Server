@@ -13,6 +13,8 @@ public:
 	int clientID;
 	std::string clientName;
 	std::string* message;
+	float servoDegree;
+	int speed;
 
 	ServerInfo() {
 
@@ -59,6 +61,12 @@ public:
 					else
 						message = new std::string(tmp);
 					break;
+				case 4: 
+					servoDegree = SDL_atof(tmp.c_str());
+					break;
+				case 5 :
+					speed = SDL_atoi(tmp.c_str());
+					break;
 			}
 			tmp.clear();
 		}
@@ -88,6 +96,12 @@ public:
 		else
 			returnValue.append("NULL");
 		returnValue.push_back('\n');
+		
+		returnValue += std::to_string(servoDegree);
+		returnValue.push_back('\n');
+
+		returnValue += std::to_string(speed);
+		returnValue.push_back('\n');
 	}
 };
 
@@ -98,7 +112,8 @@ public:
 	int ID;
 	std::string name;
 	std::string* message;
-
+	float servoDegree;
+	int speed;
 	ClientInfo() {
 
 		message = nullptr;
@@ -139,6 +154,14 @@ public:
 					else
 						message = new std::string(tmp);
 					break;
+
+				case 3:
+                                        servoDegree = SDL_atof(tmp.c_str());
+                                        break;
+                                case 4:
+                                        speed = SDL_atoi(tmp.c_str());
+					break;
+
 			}
 			tmp.clear();
 		}
@@ -166,5 +189,12 @@ public:
 		else
 			returnValue.append("NULL");
 		returnValue.push_back('\n');
+
+                returnValue += std::to_string(servoDegree);
+                returnValue.push_back('\n');
+
+                returnValue += std::to_string(speed);
+                returnValue.push_back('\n');
+
 	}
 };
